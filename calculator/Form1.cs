@@ -4,6 +4,7 @@ using System.ComponentModel;
 using System.Data;
 using System.Drawing;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
@@ -14,6 +15,8 @@ namespace calculator
     {
         List<double> numbersDouble = new List<double>();
         List<string> numbersStringList = new List<string>();
+        List<char> operations = new List<char>();
+        bool warningOfZero = false;
         public Form1()
         {
             InitializeComponent();
@@ -23,9 +26,22 @@ namespace calculator
         private void textBox1_TextChanged(object sender, EventArgs e)
         {
             numbersStringList.Clear();
+            operations.Clear();
+
+            if (warningOfZero)
+            {
+                textBox1.Text = textBox1.Text[textBox1.Text.Length - 1].ToString();
+                warningOfZero = false;
+            }
 
             string equation = textBox1.Text;
             char[] delimiters = { '+', '-', '÷', '·' };
+
+            foreach (char c in equation)
+            {
+                if (c == '+' || c == '-' || c == '÷' || c == '·')
+                    operations.Add(c);
+            }
 
             string[] numbersStringArray = equation.Split(delimiters);
 
@@ -138,6 +154,103 @@ namespace calculator
                 return;
             else
                  textBox1.Text = textBox1.Text.Remove(textBox1.Text.Length - 1);
+        }
+
+        private void button23_Click(object sender, EventArgs e)
+        {
+            if (operations.Count == 0 || numbersDouble.Count == 0)
+                return;
+
+            List<double> numbersDoubleInButton = new List<double>();
+            List<char> operationsInButton = new List<char>();
+
+            double result = -1;
+            bool priority = false;
+
+            for (int i = 0; i < operations.Count; i++ )
+            {
+                if (operations[i] == '÷' || operations[i] == '·')
+                {
+                    if (priority)
+                    {
+                        result = ToCount(result, numbersDouble[i + 1], operations[i]);
+                        numbersDoubleInButton.RemoveAt(numbersDoubleInButton.Count - 1);
+                    }
+                    else
+                        result = ToCount(numbersDouble[i], numbersDouble[i + 1], operations[i]);
+
+                    numbersDoubleInButton.Add(result);
+                    priority = true;
+                }
+                else
+                {
+                    if (!priority)
+                    {
+                        numbersDoubleInButton.Add(numbersDouble[i]);
+                    }
+
+                    priority = false;
+                    operationsInButton.Add(operations[i]);
+                    
+
+                    if (i == operations.Count - 1)
+                        numbersDoubleInButton.Add(numbersDouble[i + 1]);
+                }
+                
+            }
+            if (numbersDoubleInButton.Count == 1)
+                textBox1.Text = numbersDoubleInButton[0].ToString();
+            else
+            {
+                result = ToCount(numbersDoubleInButton[0], numbersDoubleInButton[1], operationsInButton[0]);
+
+
+                if (numbersDoubleInButton.Count == 2)
+                {
+                    if (warningOfZero)
+                        textBox1.Text = "Nelze dělit 0";
+                    else
+                        textBox1.Text = result.ToString();
+                }
+                else
+                {
+                    for (int i = 2; i < numbersDoubleInButton.Count; i++)
+                    {
+                        result = ToCount(result, numbersDoubleInButton[i], operationsInButton[i - 1]);
+                    }
+
+                    if (warningOfZero)
+                        textBox1.Text = "Nelze dělit 0";
+                    else
+                        textBox1.Text = result.ToString();
+                }
+            }
+        }
+
+        public double ToCount(double x, double y, char operation)
+        {
+            double result = -1;
+
+            switch (operation)
+            {
+                case '+':
+                    result = x + y;
+                    break;
+                case '-':
+                    result = x - y;
+                    break;
+                case '÷':
+                    if (y == 0)
+                        warningOfZero = true;
+                    else
+                        result = x / y;
+                    break;
+                case '·':
+                    result = x * y;
+                    break;
+            }
+
+            return result;
         }
     }
 }
